@@ -1,0 +1,8 @@
+**/target/**
+**/.git/**
+**/.settings/**
+.classpath
+.project
+*.log
+.idea/
+*.iml

@@ -1,0 +1,55 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<style type="text/css">
+		body{
+			margin: 0;
+			padding: 0;
+		}
+	</style>
+</head>
+<body>
+	<div id="box">
+		<img src="captcha_0.jpg" id="captcha">
+		<input type="text" id="answer" name="answer" value="">
+	</div>
+
+	<script type="text/javascript" src="jquery-2.0.3.min.js"></script>
+
+
+
+	<script type="text/javascript">
+		$("#captcha").on("click",function(e){
+			var x = getX(e);
+			var y = getY(e);
+			show(x,y)
+
+
+			y -= 30;
+			var answer = $("#answer").val();
+			if(answer.length > 0){
+				answer += ',';
+			}
+			answer += x + ',' + y;
+			$("#answer").val(answer);
+		});
+		function getX(e) {
+			e = e || window.event;
+			return e.pageX || e.clientX + document.body.scroolLeft;
+		}
+
+		function getY(e) {
+			e = e|| window.event;
+			return e.pageY || e.clientY + document.boyd.scrollTop;
+		} 
+
+		function show(x,y){
+			var size = 20;
+			x = x - size / 2;
+			y = y - size / 2;
+			var html = '<div style="border-radius: '+size+'px;background-color:red;width:'+size+'px;height:'+size+'px;position:absolute;top:'+y+'px;left:'+x+'px;"><div>';
+			$("#box").append(html);
+		}
+	</script>
+</body>
+</html>
