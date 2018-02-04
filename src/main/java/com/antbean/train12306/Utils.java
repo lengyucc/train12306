@@ -27,14 +27,15 @@ public class Utils {
 	public static void main(String[] args) throws HttpException, IOException {
 		start();
 		System.out.println("#####################");
-		req("https://kyfw.12306.cn/otn/confirmPassenger/initDc?_json_att", "", "");
+//		req("https://kyfw.12306.cn/otn/confirmPassenger/initDc?_json_att", "", "");
 	}
 
 	public static void start() {
 		HTTP_CLIENT = new HttpClient();
 		HTTP_CLIENT.getParams().setCookiePolicy(CookiePolicy.DEFAULT);
 		try {
-			writeCaptcha(new FileOutputStream("C:\\Users\\work0401\\Desktop\\12306\\captcha_0.jpg"));
+			writeCaptcha(new FileOutputStream(
+					ClassLoader.getSystemClassLoader().getResource("12306/captcha_0.jpg").getFile()));
 			String answer = inputCaptcha();
 			boolean checkCaptchaResult = checkCaptcha(answer);
 			if (checkCaptchaResult) {
@@ -42,14 +43,13 @@ public class Utils {
 				System.out.println("开始登录……");
 				boolean loginResult = login("1902328305@qq.com", "ming2014");
 				if (loginResult) {
-					System.out.println(login_uamtk);
-					
+					System.out.println("登录成功！" + login_uamtk);
+
 					// 检查用户
-					
-					
 					
 				} else {
 					System.out.println("登录失败!");
+					System.exit(1);
 				}
 			} else {
 				System.err.println("验证码输入失败!");
@@ -124,7 +124,7 @@ public class Utils {
 	}
 
 	public static void req(String url, String success, String failure) throws HttpException, IOException {
-//		GetMethod getMethod = new GetMethod(url);
+		// GetMethod getMethod = new GetMethod(url);
 		PostMethod getMethod = new PostMethod(url);
 		int statusCode = HTTP_CLIENT.executeMethod(getMethod);
 		System.out.println("statusCode=" + statusCode);
