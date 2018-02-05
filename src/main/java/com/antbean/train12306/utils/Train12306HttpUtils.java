@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Date;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.httpclient.Cookie;
 import org.apache.commons.httpclient.HttpClient;
@@ -59,48 +61,10 @@ public class Train12306HttpUtils {
 		if (StringUtils.isNotBlank(queryString)) {
 			httpMethod.setQueryString(queryString);
 		}
-		// httpMethod.setRequestHeader("Accept",
-		// "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-		// httpMethod.setRequestHeader("Accept-Encoding", "gzip, deflate, br");
-		// httpMethod.setRequestHeader("Accept-Language",
-		// "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2");
-		// httpMethod.setRequestHeader("Connection", "keep-alive");
-		// httpMethod.setRequestHeader("Content-Type",
-		// "application/x-www-form-urlencoded");
-		// httpMethod.setRequestHeader("Host", "kyfw.12306.cn");
-		// httpMethod.setRequestHeader("Referer",
-		// "https://kyfw.12306.cn/otn/modifyUser/initQueryUserInfo");
-		// httpMethod.setRequestHeader("Upgrade-Insecure-Requests", "1");
-		// httpMethod.setRequestHeader("User-Agent", "Mozilla/5.0 (Windows NT
-		// 10.0; Win64; x64; rv:57.0) Gecko/20100101 Firefox/57.0");
-		// if(cookies != null){
-		// StringBuffer buff = new StringBuffer();
-		// for (Cookie cookie : cookies) {
-		// buff.append(cookie.getName() + "=" + cookie.getValue() + ";");
-		// }
-		// httpMethod.setRequestHeader("Cookie", buff.substring(0, buff.length()
-		// - 1));
-		// }
 		try {
 			HttpClient client = getDefaultHttpClient();
-			// if(uamtk != null){
-			// System.out.println("---------->>>>>>>>>>>>>>>>>>>>>>>>>");
-			// client.getState().addCookie(new Cookie("kyfw.12306.cn", "uamtk",
-			// uamtk));
-			// }
-			// if(cookies != null){
-			// client.getState().addCookies(cookies);
-			// }
-			// System.out.println("###########################################");
-			// System.out.println("----------------" + uri +
-			// "----------------");
-			// System.out.println("----------------前----------------");
-			// showCookies();
 			int responseCode = client.executeMethod(httpMethod);
-			// System.out.println("----------------后----------------");
 			showCookies();
-			// System.out.println("###########################################");
-			// cookies = client.getState().getCookies();
 			return handler.process(responseCode, httpMethod);
 		} catch (HttpException e) {
 			throw new RuntimeException("网络异常", e);
@@ -221,7 +185,15 @@ public class Train12306HttpUtils {
 			public Boolean process(int responseCode, HttpMethod httpMethod) throws IOException {
 				if (200 == responseCode) {
 					String responseBodyAsString = httpMethod.getResponseBodyAsString();
-					return responseBodyAsString.contains("modifyUserForm");
+					if (responseBodyAsString.contains("modifyUserForm")) {
+						final String REGEX_LOGINED_INFO = "class=\"info-item\".+class=\"label\">(.+):.+class=\"con\">(.+)<";
+						Pattern pattern = Pattern.compile(REGEX_LOGINED_INFO);
+						Matcher matcher = pattern.matcher(responseBodyAsString);
+						while (matcher.find()) {
+							System.out.println("----------->>>> " + matcher.group());
+						}
+						return true;
+					}
 				}
 				return false;
 			}
