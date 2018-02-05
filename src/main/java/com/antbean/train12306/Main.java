@@ -49,6 +49,9 @@ public class Main {
 		System.exit(0);
 	}
 
+	public static void do6() {
+		String url = inputString();
+	}
 	/**
 	 * 登录
 	 */
