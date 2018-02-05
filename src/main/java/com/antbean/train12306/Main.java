@@ -1,0 +1,94 @@
+package com.antbean.train12306;
+
+import java.io.FileOutputStream;
+import java.io.OutputStream;
+import java.lang.reflect.Method;
+import java.util.Scanner;
+
+import org.apache.commons.io.IOUtils;
+
+import com.antbean.train12306.utils.OSExecute;
+import com.antbean.train12306.utils.Train12306HttpUtils;
+
+public class Main {
+	static Scanner scanner = new Scanner(System.in);
+
+	public static void main(String[] args) {
+		start();
+	}
+
+	public static void start() {
+		while (true) {
+			showTitle();
+			int code = inputCode();
+			try {
+				Method method = Main.class.getDeclaredMethod("do" + code);
+				method.invoke(null);
+			} catch (Exception e) {
+				System.err.println("功能尚未实现");
+			}
+		}
+	}
+
+	public static void showTitle() {
+		String loginStatus = Train12306HttpUtils.checkLoginStatus() ? "已登录" : "未登录";
+		System.out.println("************* " + loginStatus + " *************");
+		System.out.println("0 退出程序");
+		System.out.println("11 登录12306");
+		System.out.println("12 退出12306");
+		System.out.println("21 查看个人信息");
+		System.out.println("3 ");
+		System.out.println("4 ");
+		System.out.println("5 ");
+		System.out.println("6 ");
+		System.out.println("******************************");
+		System.out.print("选择操作：");
+	}
+
+	public static void do0() {
+		System.exit(0);
+	}
+
+	/**
+	 * 登录
+	 */
+	public static void do11() {
+		System.out.print("12306账号：");
+		String username = inputString();
+		System.out.print("12306密码：");
+		String password = inputString();
+		// 下载验证码
+		String captchaPath = ClassLoader.getSystemClassLoader().getResource("12306/captcha_0.jpg").getFile();
+		OutputStream out = null;
+		try {
+			out = new FileOutputStream(captchaPath);
+			Train12306HttpUtils.writeCaptcha(out);
+		} catch (Exception e) {
+			throw new RuntimeException("获取验证码失败", e);
+		} finally {
+			IOUtils.closeQuietly(out);
+		}
+		// 打开验证码
+		String captchaPage = ClassLoader.getSystemClassLoader().getResource("12306/index.html").getFile();
+		OSExecute.command(captchaPage.substring(1));
+		// 登录
+		System.out.print("验证码（坐标）：");
+		String captcha = inputString();
+		Train12306HttpUtils.login(username, password, captcha);
+	}
+
+	public static int inputCode() {
+		int op;
+		try {
+			String input = scanner.nextLine();
+			op = Integer.parseInt(input);
+		} catch (Exception e) {
+			op = -1;
+		}
+		return op;
+	}
+
+	public static String inputString() {
+		return scanner.nextLine();
+	}
+}
