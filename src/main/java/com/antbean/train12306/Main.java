@@ -7,6 +7,8 @@ import java.util.Scanner;
 
 import org.apache.commons.io.IOUtils;
 
+import com.antbean.train12306.entity.LoginedUserInfo;
+import com.antbean.train12306.utils.CookieUtils;
 import com.antbean.train12306.utils.OSExecute;
 import com.antbean.train12306.utils.Train12306HttpUtils;
 
@@ -31,7 +33,7 @@ public class Main {
 	}
 
 	public static void showTitle() {
-		String loginStatus = Train12306HttpUtils.checkLoginStatus() ? "已登录" : "未登录";
+		String loginStatus = Train12306HttpUtils.checkLoginStatus() != null ? "已登录" : "未登录";
 		System.out.println("************* " + loginStatus + " *************");
 		System.out.println("0 退出程序");
 		System.out.println("11 登录12306");
@@ -52,6 +54,7 @@ public class Main {
 	public static void do6() {
 		String url = inputString();
 	}
+
 	/**
 	 * 登录
 	 */
@@ -78,6 +81,23 @@ public class Main {
 		System.out.print("验证码（坐标）：");
 		String captcha = inputString();
 		Train12306HttpUtils.login(username, password, captcha);
+	}
+
+	/**
+	 * 退出登录
+	 */
+	public static void do12() {
+		CookieUtils.removeAllCookies();
+		System.out.println("已退出！");
+	}
+
+	/**
+	 * 查看个人信息
+	 */
+	public static void do21() {
+		LoginedUserInfo loginedUserInfo = Train12306HttpUtils.checkLoginStatus();
+		System.out.println("========================== 个人信息 ==========================");
+		System.out.println(loginedUserInfo);
 	}
 
 	public static int inputCode() {
