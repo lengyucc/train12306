@@ -1,4 +1,4 @@
-package com.antbean.train12306.entity;
+package com.antbean.train12306.entity.response;
 
 public class LoginResult {
 	private String result_message;

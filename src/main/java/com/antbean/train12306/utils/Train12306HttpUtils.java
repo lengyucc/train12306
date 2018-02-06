@@ -3,9 +3,6 @@ package com.antbean.train12306.utils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Date;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.commons.httpclient.Cookie;
 import org.apache.commons.httpclient.HttpClient;
@@ -15,12 +12,13 @@ import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.time.DateUtils;
 
 import com.alibaba.fastjson.JSON;
-import com.antbean.train12306.entity.CheckCaptchaResult;
-import com.antbean.train12306.entity.LoginResult;
-import com.antbean.train12306.entity.UamtkAuthResult;
+import com.antbean.train12306.entity.LoginedUserInfo;
+import com.antbean.train12306.entity.response.CheckCaptchaResult;
+import com.antbean.train12306.entity.response.LoginResult;
+import com.antbean.train12306.entity.response.UamAuthClientResult;
+import com.antbean.train12306.entity.response.UamtkAuthResult;
 import com.antbean.train12306.handler.HttpResponseHandler;
 import com.antbean.train12306.handler.impl.StreamHttpResponseHandler;
 import com.antbean.train12306.handler.impl.StringHttpResponseHandler;
@@ -94,6 +92,9 @@ public class Train12306HttpUtils {
 		}
 	}
 
+	/**
+	 * 登录到12306
+	 */
 	public static void login(String username, String password, String captcha) {
 		// 1.校验验证码
 		doReq(Train12306Urls.CHECK_CAPTCHA_URL, "get", "answer=" + captcha + "&login_site=E&rand=sjrand",
@@ -141,36 +142,28 @@ public class Train12306HttpUtils {
 							// {"result_message":"验证通过","result_code":0,"apptk":null,"newapptk":"Cz2EHtYAmjS5slF6SMP5pdvzlzbmro07mN7dW46t_e_ZF9VRty1210"}
 							UamtkAuthResult uamtkAuthResult = JSON.parseObject(responseBodyAsString,
 									UamtkAuthResult.class);
-
-							System.out.println(responseBodyAsString);
 							return uamtkAuthResult;
 						}
 						throw new RuntimeException("错误的状态码" + responseCode);
 					}
 				});
 		// 添加cookie:tk
-		getDefaultHttpClient().getState().addCookie(//
-				new Cookie("kyfw.12306.cn"// domain
-						, "tk"// name
-						, uamtkAuthResult.getNewapptk()//// value
-						, "/otn"// path
-						, DateUtils.addDays(new Date(), 20)// expires
-						, false));
+		CookieUtils.addCookie("tk", uamtkAuthResult.getNewapptk(), "/otn");
 		// 设置cookie：uamtk过期
-		getDefaultHttpClient().getState().addCookie(//
-				new Cookie("kyfw.12306.cn"// domain
-						, "uamtk"// name
-						, "", // value
-						"/passport"// path
-						, new Date(System.currentTimeMillis() - 1000)// expires
-						, false));
+		CookieUtils.removeCookie("uamtk", "/passport");
 		doReq("https://kyfw.12306.cn/otn/uamauthclient?tk=" + uamtkAuthResult.getNewapptk(), "post", null,
 				new HttpResponseHandler<String>() {
 					@Override
 					public String process(int responseCode, HttpMethod httpMethod) throws IOException {
 						if (200 == responseCode) {
 							String responseBodyAsString = httpMethod.getResponseBodyAsString();
-							System.out.println(responseBodyAsString);
+							// {"apptk":"3hYbeze0RDb-XELynhG0uFo-awwsgpUZdEGVOIdWhTXwISp7rw1210","result_code":0,"result_message":"验证通过","username":"李明会"}
+							UamAuthClientResult uamAuthClientResult = JSON.parseObject(responseBodyAsString,
+									UamAuthClientResult.class);
+							if (0 != uamAuthClientResult.getResult_code()) {
+								throw new RuntimeException(uamAuthClientResult.getResult_message());
+							}
+							System.out.println("验证通过,当前登录用户:" + uamAuthClientResult.getUsername());
 							return responseBodyAsString;
 						}
 						throw new RuntimeException("错误的状态码" + responseCode);
@@ -179,25 +172,26 @@ public class Train12306HttpUtils {
 
 	}
 
-	public static boolean checkLoginStatus() {
-		return (boolean) doReq(Train12306Urls.QUERY_USER_INFO_URL, "get", null, new HttpResponseHandler<Boolean>() {
-			@Override
-			public Boolean process(int responseCode, HttpMethod httpMethod) throws IOException {
-				if (200 == responseCode) {
-					String responseBodyAsString = httpMethod.getResponseBodyAsString();
-					if (responseBodyAsString.contains("modifyUserForm")) {
-						final String REGEX_LOGINED_INFO = "class=\"info-item\".+class=\"label\">(.+):.+class=\"con\">(.+)<";
-						Pattern pattern = Pattern.compile(REGEX_LOGINED_INFO);
-						Matcher matcher = pattern.matcher(responseBodyAsString);
-						while (matcher.find()) {
-							System.out.println("----------->>>> " + matcher.group());
+	/**
+	 * 检查登录状态
+	 */
+	public static LoginedUserInfo checkLoginStatus() {
+		return (LoginedUserInfo) doReq(Train12306Urls.QUERY_USER_INFO_URL, "get", null,
+				new HttpResponseHandler<LoginedUserInfo>() {
+					@Override
+					public LoginedUserInfo process(int responseCode, HttpMethod httpMethod) throws IOException {
+						if (200 == responseCode) {
+							String responseBodyAsString = httpMethod.getResponseBodyAsString();
+							if (responseBodyAsString.contains("modifyUserForm")) {
+								LoginedUserInfo loginedUserInfo = LoginedUserInfoUtils
+										.parseLoginedUserInfo(responseBodyAsString);
+								Train12306Context.setLoginedUserInfo(loginedUserInfo);
+								return loginedUserInfo;
+							}
 						}
-						return true;
+						return null;
 					}
-				}
-				return false;
-			}
-		});
+				});
 	}
 
 	public static void main(String[] args) throws Exception {

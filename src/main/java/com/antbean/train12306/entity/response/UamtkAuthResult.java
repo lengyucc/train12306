@@ -1,4 +1,4 @@
-package com.antbean.train12306.entity;
+package com.antbean.train12306.entity.response;
 
 public class UamtkAuthResult {
 // {"result_message":"验证通过","result_code":0,"apptk":null,"newapptk":"Cz2EHtYAmjS5slF6SMP5pdvzlzbmro07mN7dW46t_e_ZF9VRty1210"}

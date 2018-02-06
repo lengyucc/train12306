@@ -1,4 +1,4 @@
-package com.antbean.train12306.entity;
+package com.antbean.train12306.entity.response;
 
 public class CheckCaptchaResult {
 	private String result_message;
