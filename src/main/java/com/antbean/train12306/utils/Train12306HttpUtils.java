@@ -13,12 +13,10 @@ import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 
-import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import com.antbean.train12306.constants.TicketTypes;
+import com.antbean.train12306.constants.Train12306Urls;
 import com.antbean.train12306.entity.LoginedUserInfo;
-import com.antbean.train12306.entity.response.CheckCaptchaResult;
-import com.antbean.train12306.entity.response.LoginResult;
-import com.antbean.train12306.entity.response.UamAuthClientResult;
-import com.antbean.train12306.entity.response.UamtkAuthResult;
 import com.antbean.train12306.handler.HttpResponseHandler;
 import com.antbean.train12306.handler.impl.StreamHttpResponseHandler;
 import com.antbean.train12306.handler.impl.StringHttpResponseHandler;
@@ -103,11 +101,10 @@ public class Train12306HttpUtils {
 					public String process(int responseCode, HttpMethod httpMethod) throws IOException {
 						if (200 == responseCode) {
 							String responseBodyAsString = httpMethod.getResponseBodyAsString();
-							CheckCaptchaResult ccr = JSON.parseObject(responseBodyAsString, CheckCaptchaResult.class);
-							if (!"4".equals(ccr.getResult_code())) {
-								throw new RuntimeException(ccr.getResult_message());
+							JSONObject jsonObject = JSONObject.parseObject(responseBodyAsString);
+							if (!"4".equals(jsonObject.getString("result_code"))) {
+								throw new RuntimeException(jsonObject.getString("result_message"));
 							}
-							System.out.println(ccr.getResult_message());
 							return httpMethod.getResponseBodyAsString();
 						}
 						throw new RuntimeException("错误的状态码" + responseCode);
@@ -120,50 +117,49 @@ public class Train12306HttpUtils {
 					public String process(int responseCode, HttpMethod httpMethod) throws IOException {
 						if (200 == responseCode) {
 							String responseBodyAsString = httpMethod.getResponseBodyAsString();
-							LoginResult lr = JSON.parseObject(responseBodyAsString, LoginResult.class);
-							if (0 != lr.getResult_code()) {
-								throw new RuntimeException(lr.getResult_message());
+							JSONObject jsonObject = JSONObject.parseObject(responseBodyAsString);
+							if (0 != jsonObject.getIntValue("result_code")) {
+								throw new RuntimeException(jsonObject.getString("result_message"));
 							}
-							System.out.println(lr.getResult_message());
-							return httpMethod.getResponseBodyAsString();
+							return responseBodyAsString;
 						}
 						throw new RuntimeException("错误的状态码" + responseCode);
 					}
 				});
 		// 3.验证登录
 		getDefaultHttpClient().getState().addCookie(new Cookie("kyfw.12306.cn", "current_captcha_type", "Z"));
-		UamtkAuthResult uamtkAuthResult = (UamtkAuthResult) doReq(
-				"https://kyfw.12306.cn/passport/web/auth/uamtk?appid=otn", "post", null,
-				new HttpResponseHandler<UamtkAuthResult>() {
+		String newapptk = (String) doReq("https://kyfw.12306.cn/passport/web/auth/uamtk?appid=otn", "post", null,
+				new HttpResponseHandler<String>() {
 					@Override
-					public UamtkAuthResult process(int responseCode, HttpMethod httpMethod) throws IOException {
+					public String process(int responseCode, HttpMethod httpMethod) throws IOException {
 						if (200 == responseCode) {
 							String responseBodyAsString = httpMethod.getResponseBodyAsString();
 							// {"result_message":"验证通过","result_code":0,"apptk":null,"newapptk":"Cz2EHtYAmjS5slF6SMP5pdvzlzbmro07mN7dW46t_e_ZF9VRty1210"}
-							UamtkAuthResult uamtkAuthResult = JSON.parseObject(responseBodyAsString,
-									UamtkAuthResult.class);
-							return uamtkAuthResult;
+							JSONObject jsonObject = JSONObject.parseObject(responseBodyAsString);
+							if (0 != jsonObject.getIntValue("result_code")) {
+								throw new RuntimeException(jsonObject.getString("result_message"));
+							}
+							return jsonObject.getString("newapptk");
 						}
 						throw new RuntimeException("错误的状态码" + responseCode);
 					}
 				});
 		// 添加cookie:tk
-		CookieUtils.addCookie("tk", uamtkAuthResult.getNewapptk(), "/otn");
+		CookieUtils.addCookie("tk", newapptk, "/otn");
 		// 设置cookie：uamtk过期
 		CookieUtils.removeCookie("uamtk", "/passport");
-		doReq("https://kyfw.12306.cn/otn/uamauthclient?tk=" + uamtkAuthResult.getNewapptk(), "post", null,
+		doReq("https://kyfw.12306.cn/otn/uamauthclient?tk=" + newapptk, "post", null,
 				new HttpResponseHandler<String>() {
 					@Override
 					public String process(int responseCode, HttpMethod httpMethod) throws IOException {
 						if (200 == responseCode) {
 							String responseBodyAsString = httpMethod.getResponseBodyAsString();
 							// {"apptk":"3hYbeze0RDb-XELynhG0uFo-awwsgpUZdEGVOIdWhTXwISp7rw1210","result_code":0,"result_message":"验证通过","username":"李明会"}
-							UamAuthClientResult uamAuthClientResult = JSON.parseObject(responseBodyAsString,
-									UamAuthClientResult.class);
-							if (0 != uamAuthClientResult.getResult_code()) {
-								throw new RuntimeException(uamAuthClientResult.getResult_message());
+							JSONObject jsonObject = JSONObject.parseObject(responseBodyAsString);
+							if (0 != jsonObject.getIntValue("result_code")) {
+								throw new RuntimeException(jsonObject.getString("result_message"));
 							}
-							System.out.println("验证通过,当前登录用户:" + uamAuthClientResult.getUsername());
+							System.out.println("验证通过,当前登录用户:" + jsonObject.getString("username"));
 							return responseBodyAsString;
 						}
 						throw new RuntimeException("错误的状态码" + responseCode);
@@ -194,8 +190,34 @@ public class Train12306HttpUtils {
 				});
 	}
 
+	/**
+	 * 查票
+	 */
+	public static void queryTickets(String trainDate, String fromStation, String toStation, String ticketType) {
+		String queryString = "leftTicketDTO.train_date=" + trainDate + "&leftTicketDTO.from_station=" + fromStation
+				+ "&leftTicketDTO.to_station=" + toStation + "&purpose_codes=" + ticketType;
+		doReq(Train12306Urls.QUERY_TICKET_URL, "get", queryString, new HttpResponseHandler<String>() {
+			@Override
+			public String process(int responseCode, HttpMethod httpMethod) throws IOException {
+				if (200 == responseCode) {
+					String responseBodyAsString = httpMethod.getResponseBodyAsString();
+					System.out.println(responseBodyAsString);
+					JSONObject jsonObject = JSONObject.parseObject(responseBodyAsString);
+					if (200 != jsonObject.getIntValue("httpstatus")) {
+						throw new RuntimeException(jsonObject.getString("messages"));
+					}
+					String data = jsonObject.getString("data");
+					TicketUtils.parseTickets(data);
+					
+					return null;
+				}
+				return null;
+			}
+		});
+	}
+
 	public static void main(String[] args) throws Exception {
-		System.out.println(checkLoginStatus());
+		queryTickets("2018-02-21", "HGH", "FYH", TicketTypes.ADULT);
 	}
 
 }
