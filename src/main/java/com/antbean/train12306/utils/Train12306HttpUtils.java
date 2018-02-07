@@ -1,5 +1,7 @@
 package com.antbean.train12306.utils;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -80,20 +82,22 @@ public class Train12306HttpUtils {
 	/**
 	 * 获取验证码
 	 */
-	public static int writeCaptcha(OutputStream out) {
+	public static int writeCaptcha(File outFile) {
+		OutputStream out = null;
+		InputStream in = null;
 		try {
-			InputStream in = (InputStream) doReq(Train12306Urls.GET_CAPTCHA_URL, "get", null,
-					STREAM_HTTP_RESPONSE_HANDLER);
+			out = new FileOutputStream(outFile);
+			in = (InputStream) doReq(Train12306Urls.GET_CAPTCHA_URL, "get", null, STREAM_HTTP_RESPONSE_HANDLER);
 			return IOUtils.copy(in, out);
 		} catch (IOException e) {
 			throw new RuntimeException("获取验证码失败", e);
+		} finally {
+			IOUtils.closeQuietly(out);
+			IOUtils.closeQuietly(in);
 		}
 	}
 
-	/**
-	 * 登录到12306
-	 */
-	public static void login(String username, String password, String captcha) {
+	public static void checkCaptcha(String captcha) {
 		// 1.校验验证码
 		doReq(Train12306Urls.CHECK_CAPTCHA_URL, "get", "answer=" + captcha + "&login_site=E&rand=sjrand",
 				new HttpResponseHandler<String>() {
@@ -110,7 +114,13 @@ public class Train12306HttpUtils {
 						throw new RuntimeException("错误的状态码" + responseCode);
 					}
 				});
-		// 2.登录
+	}
+
+	/**
+	 * 登录到12306
+	 */
+	public static void login(String username, String password) {
+		// 1.登录
 		doReq(Train12306Urls.LOGIN_URL, "post", "username=" + username + "&password=" + password + "&appid=otn",
 				new HttpResponseHandler<String>() {
 					@Override
@@ -126,7 +136,7 @@ public class Train12306HttpUtils {
 						throw new RuntimeException("错误的状态码" + responseCode);
 					}
 				});
-		// 3.验证登录
+		// 2.验证登录
 		getDefaultHttpClient().getState().addCookie(new Cookie("kyfw.12306.cn", "current_captcha_type", "Z"));
 		String newapptk = (String) doReq("https://kyfw.12306.cn/passport/web/auth/uamtk?appid=otn", "post", null,
 				new HttpResponseHandler<String>() {
@@ -208,7 +218,7 @@ public class Train12306HttpUtils {
 					}
 					String data = jsonObject.getString("data");
 					TicketUtils.parseTickets(data);
-					
+
 					return null;
 				}
 				return null;

@@ -1,11 +1,8 @@
 package com.antbean.train12306;
 
-import java.io.FileOutputStream;
-import java.io.OutputStream;
+import java.io.File;
 import java.lang.reflect.Method;
 import java.util.Scanner;
-
-import org.apache.commons.io.IOUtils;
 
 import com.antbean.train12306.entity.LoginedUserInfo;
 import com.antbean.train12306.utils.CookieUtils;
@@ -52,7 +49,6 @@ public class Main {
 	}
 
 	public static void do6() {
-		String url = inputString();
 	}
 
 	/**
@@ -65,14 +61,12 @@ public class Main {
 		String password = inputString();
 		// 下载验证码
 		String captchaPath = ClassLoader.getSystemClassLoader().getResource("12306/captcha_0.jpg").getFile();
-		OutputStream out = null;
+		File outFile = null;
 		try {
-			out = new FileOutputStream(captchaPath);
-			Train12306HttpUtils.writeCaptcha(out);
+			outFile = new File(captchaPath);
+			Train12306HttpUtils.writeCaptcha(outFile);
 		} catch (Exception e) {
 			throw new RuntimeException("获取验证码失败", e);
-		} finally {
-			IOUtils.closeQuietly(out);
 		}
 		// 打开验证码
 		String captchaPage = ClassLoader.getSystemClassLoader().getResource("12306/index.html").getFile();
@@ -80,7 +74,8 @@ public class Main {
 		// 登录
 		System.out.print("验证码（坐标）：");
 		String captcha = inputString();
-		Train12306HttpUtils.login(username, password, captcha);
+		Train12306HttpUtils.checkCaptcha(captcha);
+		Train12306HttpUtils.login(username, password);
 	}
 
 	/**
