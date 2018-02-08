@@ -57,8 +57,10 @@ public class Main {
 	public static void do11() {
 		System.out.print("12306账号：");
 		String username = inputString();
+//		String username = inputString();
 		System.out.print("12306密码：");
-		String password = inputString();
+//		String password = inputString();
+		String password = "ming2014";
 		// 下载验证码
 		String captchaPath = ClassLoader.getSystemClassLoader().getResource("12306/captcha_0.jpg").getFile();
 		File outFile = null;

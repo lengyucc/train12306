@@ -3,10 +3,12 @@ package com.antbean.train12306.utils;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 
 import com.antbean.train12306.entity.Station;
@@ -47,6 +49,18 @@ public final class StationUtils {
 			}
 		}
 		return findResults;
+	}
+
+	@SuppressWarnings("unchecked")
+	public static List<Station> findStationsByKeywords(String keywords) {
+		try {
+			String resource = FileUtils.readFileToString(
+					new File(ClassLoader.getSystemClassLoader().getResource("12306/stations.txt").getFile()), "utf-8");
+			List<Station> stations = parseStations(resource);
+			return findStationsByKeywords(stations, keywords);
+		} catch (IOException e) {
+			return Collections.EMPTY_LIST;
+		}
 	}
 
 	public static void main(String[] args) throws IOException {

@@ -1,41 +1,20 @@
 package com.antbean.train12306;
 
-import java.io.File;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import org.apache.commons.io.FileUtils;
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.methods.GetMethod;
+import org.apache.commons.httpclient.methods.PostMethod;
 
 public class Test {
 	public static void main(String[] args) throws Exception {
-		// @bjb|北京北|VAP|beijingbei|bjb|0@bjd|北京东|BOP|beijingdong|bjd|1@bji|北京|BJP|beijing|bj|
-		String stations = FileUtils.readFileToString(
-				new File(ClassLoader.getSystemClassLoader().getResource("12306/stations.txt").getFile()), "utf-8");
-		System.out.println(stations);
-		Pattern pattern = Pattern.compile("@([a-z]+)\\|([\u4E00-\u9FA5]+)\\|([A-Z]+)\\|([a-z]+)\\|([a-z]+)\\|(\\d+)");
-		Matcher matcher = pattern.matcher(stations);
-		int idx = 0;
-		while (matcher.find()) {
-			// System.out.println(idx++ + ":" + matcher.group());
-			String g1 = matcher.group(1); // 站点唯一标识
-			String g2 = matcher.group(2); // 站点中文
-			String g3 = matcher.group(3); // 站点检索字符
-			String g4 = matcher.group(4); // 站点拼音全拼
-			String g5 = matcher.group(5); // 站点拼音首字母
-			String g6 = matcher.group(6); // 站点序号
-//			if (!g1.equals(g5)) {
-//				System.out.println(matcher.group());
-//			}
-			if(!g1.equalsIgnoreCase(g3)) {
-				System.out.println(matcher.group());
-			}
+		HttpClient client = new HttpClient();
+		
+		String queryString = "secretStr=LJX77uVGE5NgacIof5pLbpsyIlbf1m%2B2nxXlj0V4Dr3aeO74HAjo5XlWEjbKyNRDfQneQABa2%2BWH%0AcOEylYZTgVzYhUa3EGbxcIGm0j1WDyiOMWLj%2FYLID%2BIveg1GVajqZ5yf8w%2BySyrCDICuXd5ooHjK%0Afc%2FT%2BCdH%2Bta1nz%2F%2Fd7BCUDa2iApnQhGbgXQok0ggd57elFbJpsgM5bFnlwnNmOx9oWasZJ23GWpK%0AJmycWcaCfXbnHbzslgVGdm7sffEqoAHPu1ZS9sM%3D&train_date=2018-02-09&back_train_date=2018-02-09&tour_flag=dc&purpose_codes=ADULT&query_from_station_name=%E6%9D%AD%E5%B7%9E&query_to_station_name=%E4%B8%8A%E6%B5%B7&undefined";
+		GetMethod method = new GetMethod("https://kyfw.12306.cn/otn/leftTicket/submitOrderRequest");
+		method.setQueryString(queryString);
+		int code = client.executeMethod(method);
+		System.out.println(code);
+		if(code == 200){
+			System.out.println(method.getResponseBodyAsString());
 		}
-
-		// Pattern pattern = Pattern.compile("@\\d+");
-		// Matcher matcher = pattern.matcher("@12312@abc@123@233");
-		// while (matcher.find()) {
-		// System.out.println(matcher.group());
-		// }
-		//
 	}
 }
