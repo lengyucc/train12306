@@ -1,22 +1,37 @@
 package com.antbean.train12306.utils;
 
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.commons.beanutils.BeanUtils;
+
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.antbean.train12306.entity.TrainTicket;
 
 public final class TicketUtils {
-	public static void parseTickets(String resource) {
+	public static List<TrainTicket> parseTickets(String resource) {
+		List<TrainTicket> result = new ArrayList<>();
 		JSONObject jsonObject = JSONObject.parseObject(resource);
 		JSONArray jsonArray = jsonObject.getJSONArray("result");
 		if (jsonArray.size() > 0) {
 			for (int i = 0; i < jsonArray.size(); i++) {
-				String text = jsonArray.getString(i);
-				String[] arr = text.split("\\|");
-				for (int j = 0; j < arr.length; j++) {
-					String s = arr[j];
-					System.out.println(j + ":" + s);
+				try {
+					String text = jsonArray.getString(i);
+					String[] arr = text.split("\\|");
+
+					TrainTicket tt = new TrainTicket();
+					for (int j = 0; j < arr.length; j++) {
+						BeanUtils.setProperty(tt, "f" + j, arr[j]);
+					}
+					result.add(tt);
+				} catch (IllegalAccessException | InvocationTargetException e) {
+					e.printStackTrace();
 				}
 			}
 		}
+		return result;
 	}
 
 	public static void main(String[] args) {

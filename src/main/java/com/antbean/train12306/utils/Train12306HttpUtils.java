@@ -5,6 +5,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Collections;
+import java.util.List;
 
 import org.apache.commons.httpclient.Cookie;
 import org.apache.commons.httpclient.HttpClient;
@@ -19,6 +21,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.antbean.train12306.constants.TicketTypes;
 import com.antbean.train12306.constants.Train12306Urls;
 import com.antbean.train12306.entity.LoginedUserInfo;
+import com.antbean.train12306.entity.TrainTicket;
 import com.antbean.train12306.handler.HttpResponseHandler;
 import com.antbean.train12306.handler.impl.StreamHttpResponseHandler;
 import com.antbean.train12306.handler.impl.StringHttpResponseHandler;
@@ -203,31 +206,48 @@ public class Train12306HttpUtils {
 	/**
 	 * 查票
 	 */
-	public static void queryTickets(String trainDate, String fromStation, String toStation, String ticketType) {
+	public static List<TrainTicket> queryTickets(String trainDate, String fromStation, String toStation,
+			String ticketType) {
 		String queryString = "leftTicketDTO.train_date=" + trainDate + "&leftTicketDTO.from_station=" + fromStation
 				+ "&leftTicketDTO.to_station=" + toStation + "&purpose_codes=" + ticketType;
-		doReq(Train12306Urls.QUERY_TICKET_URL, "get", queryString, new HttpResponseHandler<String>() {
-			@Override
-			public String process(int responseCode, HttpMethod httpMethod) throws IOException {
-				if (200 == responseCode) {
-					String responseBodyAsString = httpMethod.getResponseBodyAsString();
-					System.out.println(responseBodyAsString);
-					JSONObject jsonObject = JSONObject.parseObject(responseBodyAsString);
-					if (200 != jsonObject.getIntValue("httpstatus")) {
-						throw new RuntimeException(jsonObject.getString("messages"));
+		return (List<TrainTicket>) doReq(Train12306Urls.QUERY_TICKET_URL, "get", queryString,
+				new HttpResponseHandler<List<TrainTicket>>() {
+					@Override
+					public List<TrainTicket> process(int responseCode, HttpMethod httpMethod) throws IOException {
+						if (200 == responseCode) {
+							String responseBodyAsString = httpMethod.getResponseBodyAsString();
+							System.out.println(responseBodyAsString);
+							JSONObject jsonObject = JSONObject.parseObject(responseBodyAsString);
+							if (200 != jsonObject.getIntValue("httpstatus")) {
+								throw new RuntimeException(jsonObject.getString("messages"));
+							}
+							String data = jsonObject.getString("data");
+							List<TrainTicket> tickets = TicketUtils.parseTickets(data);
+							System.out.println(tickets.size());
+							return tickets;
+						}
+						return Collections.EMPTY_LIST;
 					}
-					String data = jsonObject.getString("data");
-					TicketUtils.parseTickets(data);
-
-					return null;
-				}
-				return null;
-			}
-		});
+				});
 	}
 
 	public static void main(String[] args) throws Exception {
-		queryTickets("2018-02-21", "HGH", "FYH", TicketTypes.ADULT);
+		List<TrainTicket> tickets = queryTickets("2018-02-21", "HGH", "FYH", TicketTypes.ADULT);
+		System.out.println("车次\t出发时间\t到达时间\t历时\t高级软卧\t软卧\t软座\t无座\t硬卧\t硬座\t二等座\t一等座\t商务特等座\t是否可购票");
+		for (TrainTicket tt : tickets) {
+			System.out.println(tt.getF3() + "\t" + tt.getF8() + "\t" + tt.getF9() + "\t" + tt.getF10()//
+					+ "\t" + (StringUtils.isBlank(tt.getF21()) ? "\t" : tt.getF21()) // 高级软卧
+					+ "\t" + (StringUtils.isBlank(tt.getF23()) ? "\t" : tt.getF23()) // 软卧
+					+ "\t" + (StringUtils.isBlank(tt.getF24()) ? "\t" : tt.getF24()) // 软座
+					+ "\t" + (StringUtils.isBlank(tt.getF26()) ? "\t" : tt.getF26()) // 无座
+					+ "\t" + (StringUtils.isBlank(tt.getF28()) ? "\t" : tt.getF28()) // 硬卧
+					+ "\t" + (StringUtils.isBlank(tt.getF29()) ? "\t" : tt.getF29()) // 硬座
+					+ "\t" + (StringUtils.isBlank(tt.getF30()) ? "\t" : tt.getF30()) // 二等座
+					+ "\t" + (StringUtils.isBlank(tt.getF31()) ? "\t" : tt.getF31()) // 一等座
+					+ "\t" + (StringUtils.isBlank(tt.getF32()) ? "\t" : tt.getF32()) // 商务特等座
+					+ "\t" + (StringUtils.isBlank(tt.getF11()) ? "\t" : tt.getF11()) // 是否可购票
+			);
+		}
 	}
 
 }
