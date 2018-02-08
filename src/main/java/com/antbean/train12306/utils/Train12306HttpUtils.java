@@ -29,6 +29,7 @@ import com.antbean.train12306.Main;
 import com.antbean.train12306.constants.TicketTypes;
 import com.antbean.train12306.constants.Train12306Urls;
 import com.antbean.train12306.entity.LoginedUserInfo;
+import com.antbean.train12306.entity.Passenger;
 import com.antbean.train12306.entity.Station;
 import com.antbean.train12306.entity.TrainTicket;
 import com.antbean.train12306.handler.HttpResponseHandler;
@@ -146,29 +147,6 @@ public class Train12306HttpUtils {
 	 * 登录到12306
 	 */
 	public static void login(String username, String password) {
-		// 0.获取广告中携带的cookie
-		doReq("https://ad.12306.cn/sdk/webservice/rest/appService/getAdAppInfo.json", "post",
-				new HttpResponseHandler<String>() {
-					@Override
-					public String process(int responseCode, HttpMethod httpMethod) throws IOException {
-						if (200 == responseCode) {
-							String responseBodyAsString = httpMethod.getResponseBodyAsString();
-							// {"code":"00","message":"获取成功","materialsList":[{"billId":"8d9a96ca58eb49bf9821793804b35a0d","billMaterialsId":"a12338c7642e40119147c8f86a05f3dc","filePath":"https://ad.12306.cn/res/delivery/0004/2018/02/05/201802051642209874.jpg","title":"中铁联名卡","placementPattern":"jpg","linkUri":"https://creditcard.bankcomm.com/content/dam/pc/activity/ztcard/zhongtieka4.html","marginBottom":"0","skipTime":"5000","linkType":"1","showSkipBtn":"0","btnhui":"https://ad.12306.cn/sdk/webservice/rest/appService/btnhui.json?placementNo=0004&billMaterialsId=a12338c7642e40119147c8f86a05f3dc","btnview":"https://ad.12306.cn/sdk/webservice/rest/appService/btnview.json?placementNo=0004&billMaterialsId=a12338c7642e40119147c8f86a05f3dc","thirdViewUrlList":[],"thirdClickUrlList":[],"skipTimeAgain":"0","fileList":[{"filePath":"https://ad.12306.cn/res/delivery/0004/2018/02/05/201802051642209874.jpg","fileHeight":"360","marginBottom":"0"}]}],"getType":"1","serviceUrl":"https://ad.12306.cn/sdk/webservice/rest/appService/getAdAppInfo.json","isDefault":"0","btnhui":"https://ad.12306.cn/sdk/webservice/rest/appService/btnhui.json"}
-							JSONObject jsonObject = JSONObject.parseObject(responseBodyAsString);
-							if (!"00".equals(jsonObject.getString("code"))) {
-								throw new RuntimeException(jsonObject.getString("message"));
-							}
-							return responseBodyAsString;
-						}
-						throw new RuntimeException("错误的状态码" + responseCode);
-					}
-				}, "placementNo=0004&clientType=2&billMaterialsId=ac3398e4e6b7417789051de0894b4516");
-
-		CookieUtils.addCookie(".12306.cn", "RAIL_DEVICEID",
-				"i8p6-kWwc5_ZDKi4DnWIqb43vUmyuK-JdCnUJ6X3qAlupQP3740yvjKFm0kgQ8aV3jUCzwyprn9ci4aXNCb-a3AbViYIcZ0SWIShh8JVVCXTOsEI7LbwvfACqBAy-NK7QcpdN-Qnno4QlVtzMSrylYMfu81_lEdL",
-				"/");
-		CookieUtils.addCookie(".12306.cn", "RAIL_EXPIRATION", "1518425619075", "/");
-
 		// 1.登录
 		doReq(Train12306Urls.LOGIN_URL, "post", new HttpResponseHandler<String>() {
 			@Override
@@ -232,7 +210,6 @@ public class Train12306HttpUtils {
 				throw new RuntimeException("错误的状态码" + responseCode);
 			}
 		}, "tk=" + newapptk);
-
 	}
 
 	/**
@@ -307,24 +284,6 @@ public class Train12306HttpUtils {
 
 	public static void buyTickets(List<String> names, String trainDate, String fromStation, String toStation,
 			List<String> trainNos, List<String> seatLevels) {
-
-		// doReq("https://ad.12306.cn/sdk/webservice/rest/appService/getAdAppInfo.json",
-		// "get",
-		// new HttpResponseHandler<Boolean>() {
-		// @Override
-		// public Boolean process(int responseCode, HttpMethod httpMethod)
-		// throws IOException {
-		// if (200 == responseCode) {
-		// String responseBodyAsString = httpMethod.getResponseBodyAsString();
-		// System.out.println(responseBodyAsString);
-		// return true;
-		//
-		// }
-		// throw new RuntimeException("错误的状态码" + responseCode);
-		// }
-		// },
-		// "placementNo=0004&clientType=2&billMaterialsId=a12338c7642e40119147c8f86a05f3dc");
-
 		// 查票
 		List<TrainTicket> tickets = queryTickets(trainDate, fromStation, toStation, TicketTypes.ADULT);
 		if (CollectionUtils.isEmpty(tickets)) {
@@ -382,14 +341,12 @@ public class Train12306HttpUtils {
 			if (!checkUser)
 				throw new RuntimeException("用户未登录，无法预定车票!");
 			// 提交订单请求
-
 			String secretStr = null;
 			try {
 				secretStr = URLDecoder.decode(trainTicket.getF0(), "utf-8");
 			} catch (UnsupportedEncodingException e) {
 				throw new RuntimeException(e);
 			}
-
 			doReq(Train12306Urls.SUBMIT_ORDER_REQUEST_URL, "post", new HttpResponseHandler<Boolean>() {
 				@Override
 				public Boolean process(int responseCode, HttpMethod httpMethod) throws IOException {
@@ -418,14 +375,57 @@ public class Train12306HttpUtils {
 					, new NameValuePair("query_to_station_name", toStation) //
 					, new NameValuePair("undefined", "") //
 			});
+			// 到提交订单页
+			doReq(Train12306Urls.INIT_DOC_URL, "get", new HttpResponseHandler<String>() {
+				@Override
+				public String process(int responseCode, HttpMethod httpMethod) throws IOException {
+					if (200 == responseCode) {
+						String responseBodyAsString = httpMethod.getResponseBodyAsString();
+						System.out.println(responseBodyAsString);
+						return responseBodyAsString;
 
+					}
+					throw new RuntimeException("错误的状态码" + responseCode);
+				}
+			}, "_json_att=");
+			// 获取乘客信息
+			@SuppressWarnings("unchecked")
+			List<Passenger> passengers = (List<Passenger>) doReq(Train12306Urls.GET_PASSENGER_URL, "get",
+					new HttpResponseHandler<List<Passenger>>() {
+						@Override
+						public List<Passenger> process(int responseCode, HttpMethod httpMethod) throws IOException {
+							if (200 == responseCode) {
+								String responseBodyAsString = httpMethod.getResponseBodyAsString();
+								System.out.println(responseBodyAsString);
+								// {"validateMessagesShowId":"_validatorMessage","status":true,"httpstatus":200,"data":{"isExist":true,"exMsg":"","two_isOpenClick":["93","95","97","99"],"other_isOpenClick":["91","93","98","99","95","97"],"normal_passengers":[{"code":"5","passenger_name":"李明会","sex_code":"","born_date":"2017-08-31
+								// 00:00:00","country_code":"CN","passenger_id_type_code":"1","passenger_id_type_name":"二代身份证","passenger_id_no":"412723199302105935","passenger_type":"1","passenger_flag":"0","passenger_type_name":"成人","mobile_no":"","phone_no":"","email":"","address":"","postalcode":"","first_letter":"LMH","recordCount":"10","total_times":"99","index_id":"0"},{"code":"1","passenger_name":"高亚芳","sex_code":"F","sex_name":"女","born_date":"1992-08-04
+								// 00:00:00","country_code":"CN","passenger_id_type_code":"1","passenger_id_type_name":"二代身份证","passenger_id_no":"412723199208045542","passenger_type":"1","passenger_flag":"0","passenger_type_name":"成人","mobile_no":"13673571036","phone_no":"","email":"","address":"","postalcode":"","first_letter":"GYF","recordCount":"10","total_times":"99","index_id":"1"},{"code":"2","passenger_name":"郭正龙","sex_code":"","born_date":"1900-01-01
+								// 00:00:00","country_code":"CN","passenger_id_type_code":"1","passenger_id_type_name":"二代身份证","passenger_id_no":"421182199201141337","passenger_type":"1","passenger_flag":"0","passenger_type_name":"成人","mobile_no":"","phone_no":"","email":"","address":"","postalcode":"","first_letter":"GZL","recordCount":"10","total_times":"99","index_id":"2"},{"code":"4","passenger_name":"李揪","sex_code":"","born_date":"2017-02-03
+								// 00:00:00","country_code":"CN","passenger_id_type_code":"1","passenger_id_type_name":"二代身份证","passenger_id_no":"412723197408195933","passenger_type":"1","passenger_flag":"0","passenger_type_name":"成人","mobile_no":"","phone_no":"","email":"","address":"","postalcode":"","first_letter":"LJ","recordCount":"10","total_times":"99","index_id":"3"},{"code":"3","passenger_name":"李明明","sex_code":"","born_date":"2016-11-26
+								// 00:00:00","country_code":"CN","passenger_id_type_code":"1","passenger_id_type_name":"二代身份证","passenger_id_no":"412723199803125977","passenger_type":"1","passenger_flag":"0","passenger_type_name":"成人","mobile_no":"","phone_no":"","email":"","address":"","postalcode":"","first_letter":"LMM","recordCount":"10","total_times":"99","index_id":"4"},{"code":"6","passenger_name":"史棉","sex_code":"","born_date":"2017-04-29
+								// 00:00:00","country_code":"CN","passenger_id_type_code":"1","passenger_id_type_name":"二代身份证","passenger_id_no":"412723197007255923","passenger_type":"1","passenger_flag":"0","passenger_type_name":"成人","mobile_no":"","phone_no":"","email":"","address":"","postalcode":"","first_letter":"SM","recordCount":"10","total_times":"99","index_id":"5"},{"code":"7","passenger_name":"王合修","sex_code":"","born_date":"2017-02-03
+								// 00:00:00","country_code":"CN","passenger_id_type_code":"1","passenger_id_type_name":"二代身份证","passenger_id_no":"412723197212105975","passenger_type":"1","passenger_flag":"0","passenger_type_name":"成人","mobile_no":"","phone_no":"","email":"","address":"","postalcode":"","first_letter":"WHX","recordCount":"10","total_times":"99","index_id":"6"},{"code":"8","passenger_name":"王全力","sex_code":"","born_date":"2017-02-03
+								// 00:00:00","country_code":"CN","passenger_id_type_code":"1","passenger_id_type_name":"二代身份证","passenger_id_no":"412723197011245939","passenger_type":"1","passenger_flag":"0","passenger_type_name":"成人","mobile_no":"","phone_no":"","email":"","address":"","postalcode":"","first_letter":"WQL","recordCount":"10","total_times":"99","index_id":"7"},{"code":"9","passenger_name":"吴英杰","sex_code":"","born_date":"1900-01-01
+								// 00:00:00","country_code":"CN","passenger_id_type_code":"1","passenger_id_type_name":"二代身份证","passenger_id_no":"412723199301075914","passenger_type":"1","passenger_flag":"0","passenger_type_name":"成人","mobile_no":"","phone_no":"","email":"","address":"","postalcode":"","first_letter":"WYJ","recordCount":"10","total_times":"99","index_id":"8"},{"code":"10","passenger_name":"朱佰厂","sex_code":"","born_date":"2017-05-06
+								// 00:00:00","country_code":"CN","passenger_id_type_code":"1","passenger_id_type_name":"二代身份证","passenger_id_no":"412723197408205978","passenger_type":"1","passenger_flag":"0","passenger_type_name":"成人","mobile_no":"","phone_no":"","email":"","address":"","postalcode":"","first_letter":"ZBC","recordCount":"10","total_times":"99","index_id":"9"}],"dj_passengers":[]},"messages":[],"validateMessages":{}}
+								JSONObject jsonObject = JSONObject.parseObject(responseBodyAsString);
+								if (!jsonObject.getBooleanValue("status")
+										|| !jsonObject.getJSONObject("data").getBooleanValue("isExist"))
+									throw new RuntimeException("获取乘客信息失败");
+								return jsonObject.getJSONObject("data").getJSONArray("normal_passengers")
+										.toJavaList(Passenger.class);
+
+							}
+							throw new RuntimeException("错误的状态码" + responseCode);
+						}
+					}, "_json_att=");
+			System.out.println(">>>>>>>>>>>>>>>>> " + passengers);
 			break;
 		}
 	}
 
 	public static void main(String[] args) throws Exception {
 		Main.do11();
-		TimeUnit.SECONDS.sleep(3);
 		buyTickets(null, "2018-02-09", "杭州", "上海", Arrays.asList("K80", "K528", "Z248", "K150"), null);
 	}
 

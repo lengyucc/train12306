@@ -58,7 +58,7 @@ public class Main {
 		System.out.print("12306账号：");
 		String username = inputString();
 //		String username = inputString();
-		System.out.print("12306密码：");
+//		System.out.print("12306密码：");
 //		String password = inputString();
 		String password = "ming2014";
 		// 下载验证码

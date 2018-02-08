@@ -12,4 +12,6 @@ public final class Train12306Urls {
 	public static final String QUERY_TICKET_URL = "https://kyfw.12306.cn/otn/leftTicket/queryZ";
 	public static final String CHECK_USER_URL = "https://kyfw.12306.cn/otn/login/checkUser";
 	public static final String SUBMIT_ORDER_REQUEST_URL = "https://kyfw.12306.cn/otn/leftTicket/submitOrderRequest";
+	public static final String INIT_DOC_URL = "https://kyfw.12306.cn/otn/confirmPassenger/initDc";
+	public static final String GET_PASSENGER_URL = "https://kyfw.12306.cn/otn/confirmPassenger/getPassengerDTOs";
 }
