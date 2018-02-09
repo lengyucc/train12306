@@ -719,7 +719,7 @@ public class Train12306HttpUtils {
 	public static void main(String[] args) throws Exception {
 		Main.do11();
 		buyTickets(new ArrayList<>(Arrays.asList("李明会", "张三", "李四")), "2018-02-10", "杭州", "上海",
-				new ArrayList<>(Arrays.asList("Z4382", "K528", "Z248", "K1500")),
+				new ArrayList<>(Arrays.asList("K528", "Z248", "K1500")),
 				new ArrayList<>(Arrays.asList("5", "4", "3", "2", "1")));
 	}
 
