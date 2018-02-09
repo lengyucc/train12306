@@ -631,7 +631,43 @@ public class Train12306HttpUtils {
 							, new NameValuePair("whatsSelect", "1") //
 					});
 					// 查询剩余票数
-					int ticketCount = (int) doReq(Train12306Urls.GET_ORDER_QUEUE_COUNT_URL, "post", new HttpResponseHandler<Integer>() {
+					int ticketCount = (int) doReq(Train12306Urls.GET_ORDER_QUEUE_COUNT_URL, "post",
+							new HttpResponseHandler<Integer>() {
+								@Override
+								public Integer process(int responseCode, HttpMethod httpMethod) throws IOException {
+									if (200 == responseCode) {
+										String responseBodyAsString = httpMethod.getResponseBodyAsString();
+										// 正确{"validateMessagesShowId":"_validatorMessage","status":true,"httpstatus":200,"data":{"count":"0","ticket":"689","op_2":"false","countT":"0","op_1":"false"},"messages":[],"validateMessages":{}}
+										// 错误{"validateMessagesShowId":"_validatorMessage","url":"/leftTicket/init","status":false,"httpstatus":200,"messages":["系统忙，请稍后重试"],"validateMessages":{}}
+										JSONObject jsonObject = JsonUtils.parseObject(responseBodyAsString);
+										if (!jsonObject.getBooleanValue("status")) {
+											throw new ServiceException(jsonObject.getString("messages"));
+										}
+										return jsonObject.getJSONObject("data").getInteger("ticket");
+
+									}
+									LOG.error("the response code is not expected, " + responseCode);
+									throw new ServiceException("错误的状态码" + responseCode);
+								}
+								// train_date=Sat+Feb+10+2018+00%3A00%3A00+GMT%2B0800&train_no=57000Z438205&stationTrainCode=Z4382
+								// &seatType=3&fromStationTelecode=HGH&toStationTelecode=SNH
+								// &leftTicket=jrgGYjN3HaXuNluS%252Fe%252FmC4R%252BJtBuCq%252BA%252BbFpZjMk8XV2Ich0%252F82ZT6x7rEs%253D
+								// &purpose_codes=00&train_location=G2&_json_att=&REPEAT_SUBMIT_TOKEN=1a6fb71819f76bf63c89038aa56246e0
+							},
+							new NameValuePair[] { //
+									new NameValuePair("train_date", Train12306DateUtils.format(trainDate)) //
+									, new NameValuePair("train_no", trainNo) //
+									, new NameValuePair("stationTrainCode", trainTicket.getF3()) //
+									, new NameValuePair("seatType", sl) //
+									, new NameValuePair("fromStationTelecode", fromStationTelecode) //
+									, new NameValuePair("toStationTelecode", toStationTelecode) //
+									, new NameValuePair("leftTicket", leftTicket) //
+									, new NameValuePair("purpose_codes", purposeCodes) //
+									, new NameValuePair("train_location", trainLocation) //
+									, new NameValuePair("_json_att", StringUtils.EMPTY) //
+									, new NameValuePair("REPEAT_SUBMIT_TOKEN", repeatSubmitToken) //
+							});
+					doReq(Train12306Urls.CONFIRM_SINGLE_FOR_QUEUE_URL, "post", new HttpResponseHandler<Integer>() {
 						@Override
 						public Integer process(int responseCode, HttpMethod httpMethod) throws IOException {
 							if (200 == responseCode) {
@@ -653,40 +689,6 @@ public class Train12306HttpUtils {
 						// &leftTicket=jrgGYjN3HaXuNluS%252Fe%252FmC4R%252BJtBuCq%252BA%252BbFpZjMk8XV2Ich0%252F82ZT6x7rEs%253D
 						// &purpose_codes=00&train_location=G2&_json_att=&REPEAT_SUBMIT_TOKEN=1a6fb71819f76bf63c89038aa56246e0
 					}, new NameValuePair[] { //
-							new NameValuePair("train_date", Train12306DateUtils.format(trainDate)) //
-							, new NameValuePair("train_no", trainNo) //
-							, new NameValuePair("stationTrainCode", trainTicket.getF3()) //
-							, new NameValuePair("seatType", sl) //
-							, new NameValuePair("fromStationTelecode", fromStationTelecode) //
-							, new NameValuePair("toStationTelecode", toStationTelecode) //
-							, new NameValuePair("leftTicket", leftTicket) //
-							, new NameValuePair("purpose_codes", purposeCodes) //
-							, new NameValuePair("train_location", trainLocation) //
-							, new NameValuePair("_json_att", StringUtils.EMPTY) //
-							, new NameValuePair("REPEAT_SUBMIT_TOKEN", repeatSubmitToken) //
-					});
-					doReq(Train12306Urls.CONFIRM_SINGLE_FOR_QUEUE_URL, "post", new HttpResponseHandler<Integer>() {
-						@Override
-						public Integer process(int responseCode, HttpMethod httpMethod) throws IOException {
-							if (200 == responseCode) {
-								String responseBodyAsString = httpMethod.getResponseBodyAsString();
-								// 正确{"validateMessagesShowId":"_validatorMessage","status":true,"httpstatus":200,"data":{"count":"0","ticket":"689","op_2":"false","countT":"0","op_1":"false"},"messages":[],"validateMessages":{}}
-								// 错误{"validateMessagesShowId":"_validatorMessage","url":"/leftTicket/init","status":false,"httpstatus":200,"messages":["系统忙，请稍后重试"],"validateMessages":{}}
-								JSONObject jsonObject = JsonUtils.parseObject(responseBodyAsString);
-								if (!jsonObject.getBooleanValue("status")) {
-									throw new ServiceException(jsonObject.getString("messages"));
-								}
-								return jsonObject.getJSONObject("data").getInteger("ticket");
-								
-							}
-							LOG.error("the response code is not expected, " + responseCode);
-							throw new ServiceException("错误的状态码" + responseCode);
-						}
-						// train_date=Sat+Feb+10+2018+00%3A00%3A00+GMT%2B0800&train_no=57000Z438205&stationTrainCode=Z4382
-						// &seatType=3&fromStationTelecode=HGH&toStationTelecode=SNH
-						// &leftTicket=jrgGYjN3HaXuNluS%252Fe%252FmC4R%252BJtBuCq%252BA%252BbFpZjMk8XV2Ich0%252F82ZT6x7rEs%253D
-						// &purpose_codes=00&train_location=G2&_json_att=&REPEAT_SUBMIT_TOKEN=1a6fb71819f76bf63c89038aa56246e0
-					}, new NameValuePair[] { //
 							new NameValuePair("choose_seats", StringUtils.EMPTY) //
 							, new NameValuePair("dwAll", "N") //
 							, new NameValuePair("key_check_isChange", keyCheckIsChange) //
@@ -696,7 +698,7 @@ public class Train12306HttpUtils {
 							, new NameValuePair("purpose_codes", purposeCodes) //
 							, new NameValuePair("randCode", StringUtils.EMPTY) //
 							, new NameValuePair("REPEAT_SUBMIT_TOKEN", repeatSubmitToken) //
-							
+
 							, new NameValuePair("fromStationTelecode", fromStationTelecode) //
 							, new NameValuePair("toStationTelecode", toStationTelecode) //
 							, new NameValuePair("train_location", trainLocation) //
