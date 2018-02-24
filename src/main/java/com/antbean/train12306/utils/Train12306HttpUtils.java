@@ -167,7 +167,7 @@ public class Train12306HttpUtils {
 	 * 登录到12306
 	 */
 	public static void login(String username, String password) {
-		LOG.info("login 12306, username: username");
+		LOG.info("login 12306, username: " + username);
 		// 1.登录
 		LOG.info("login step 1 entering...");
 		doReq(Train12306Urls.LOGIN_URL, "post", new HttpResponseHandler<String>() {
@@ -718,7 +718,7 @@ public class Train12306HttpUtils {
 
 	public static void main(String[] args) throws Exception {
 		Main.do11();
-		buyTickets(new ArrayList<>(Arrays.asList("李明会", "张三", "李四")), "2018-02-10", "杭州", "上海",
+		buyTickets(new ArrayList<>(Arrays.asList("李明会", "张三", "李四")), "2018-02-25", "杭州", "上海",
 				new ArrayList<>(Arrays.asList("K528", "Z248", "K1500")),
 				new ArrayList<>(Arrays.asList("5", "4", "3", "2", "1")));
 	}
